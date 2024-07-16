@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+    />
+
+    <title>Leaflet Geoserver Request</title>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Styling the popup container */
+        .leaflet-popup-content-wrapper {
+            width: 50vw;
+            max-width: 700px;
+        }
+
+        .leaflet-popup-content {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Styling the form inside the popup */
+        #popupForm {
+            font-size: 16px;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #popupForm label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+            font-size: 16px;
+        }
+        #popupForm select,
+        #popupForm textarea,
+        #popupForm input[type="text"],
+        #popupForm input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        #popupForm input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #popupForm input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        @media (max-width: 800px) {
+            .leaflet-popup-content-wrapper {
+                width: 90vw;
+            }
+            #popupForm {
+                font-size: 14px;
+            }
+            #popupForm label {
+                font-size: 14px;
+            }
+            #popupForm select,
+            #popupForm textarea,
+            #popupForm input[type="text"],
+            #popupForm input[type="file"] {
+                font-size: 14px;
+                padding: 10px;
+            }
+            #popupForm input[type="submit"] {
+                font-size: 14px;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+
+{% load static %}
+<script src="{% static 'users/js/L.Geoserver.js' %}"></script>
+<script>
+
+    var map = L.map("map", {zoomControl: false}).setView([45.426549240063714, 11.864472305415907], 16);
+    var osmLayer = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            maxZoom: 25,
+            attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }
+    ).addTo(map);
+
+    //wms pozzetti
+    var wmsLayer1 = L.Geoserver.wms("http://localhost:8080/geoserver/gis/wms", {
+        layers: "gis:pozzetti",
+    });
+    wmsLayer1.addTo(map);
+
+    //wms ru
+    var wmsLayer2 = L.Geoserver.wms("http://localhost:8080/geoserver/gis/wms", {
+        layers: "gis:ru",
+    });
+    wmsLayer2.addTo(map);
+
+    //wms tratte
+    var wmsLayer3 = L.Geoserver.wms("http://localhost:8080/geoserver/gis/wms", {
+        layers: "gis:tratte",
+    });
+    wmsLayer3.addTo(map);
+
+    // Function to show a form in a popup
+    function showForm(e) {
+        var lat = e.latlng.lat;
+        var lng = e.latlng.lng;
+
+        var popupContent = `
+            <form id="popupForm" method="post" enctype="multipart/form-data" action="{% url 'submit_report' %}">
+                {% csrf_token %}
+                <input type="hidden" name="location" value="POINT(${lng} ${lat})">
+
+                <label for="latitude">Latitude:</label>
+                <input type="text" id="latitude" name="latitude" value="${lat}" readonly>
+
+                <label for="longitude">Longitude:</label>
+                <input type="text" id="longitude" name="longitude" value="${lng}" readonly>
+
+                <label for="report_type">Type of Error:</label>
+                <select id="report_type" name="report_type">
+                    <option value="fault">Fault</option>
+                    <option value="loss of water">Loss of Water </option>
+                </select>
+
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="4"></textarea>
+
+                <label for="photo">Upload Photo:</label>
+                <input type="file" id="photo" name="photo">
+
+                <input type="submit" value="Submit">
+            </form>
+        `;
+
+        var popup = L.popup({
+            maxWidth: "auto"
+        })
+            .setLatLng(e.latlng)
+            .setContent(popupContent)
+            .openOn(map);
+    }
+
+    // Add click event listener to the map
+    map.on('click', showForm);
+
+</script>
+</body>
+</html>

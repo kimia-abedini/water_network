@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
+
+    <title>Leaflet Geoserver Request</title>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        #navbar {
+            width: 100%;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+        }
+        #navbar select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        #map-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #map {
+            width: 90%;
+            height: 90%;
+        }
+
+        /* Styling the popup container */
+        .leaflet-popup-content-wrapper {
+            width: 60vw; /* Increase width */
+            max-width: 900px; /* Increase max width */
+        }
+
+        .leaflet-popup-content {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Styling the popup content */
+        .popup-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .popup-content img {
+            max-width: 100%;
+            max-height: 500px; /* Increase max height */
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        .popup-content .details {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Styling the form inside the popup */
+        #popupForm {
+            font-size: 16px;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #popupForm label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+            font-size: 16px;
+        }
+        #popupForm select,
+        #popupForm textarea,
+        #popupForm input[type="text"],
+        #popupForm input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        #popupForm input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #popupForm input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        @media (max-width: 800px) {
+            .leaflet-popup-content-wrapper {
+                width: 90vw;
+            }
+            #popupForm {
+                font-size: 14px;
+            }
+            #popupForm label {
+                font-size: 14px;
+            }
+            #popupForm select,
+            #popupForm textarea,
+            #popupForm input[type="text"],
+            #popupForm input[type="file"] {
+                font-size: 14px;
+                padding: 10px;
+            }
+            #popupForm input[type="submit"] {
+                font-size: 14px;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="navbar">
+    <label for="yearFilter">Filter by year:</label>
+    <select id="yearFilter">
+        <option value="all">All</option>
+        {% for year in years %}
+            <option value="{{ year.year }}">{{ year.year }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div id="map-container">
+    <div id="map"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+
+<script>
+    var map = L.map("map", {zoomControl: false}).setView([45.428152125702184, 11.866865158081056], 16);
+    var osmLayer = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            maxZoom: 25,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }
+    ).addTo(map);
+
+    // Parse the geojson data passed from Django view
+    var geojson = JSON.parse('{{ geojson|escapejs }}');
+
+    // Define a function to create popups with detailed information
+    function onEachFeature(feature, layer) {
+        if (feature.properties) {
+            var popupContent = `
+                <div class="popup-content">
+                    <div class="details">
+                        <b>Type:</b> ${feature.properties.report_type}<br>
+                        <b>Description:</b> ${feature.properties.description}<br>
+                        <b>Date:</b> ${new Date(feature.properties.report_date).toLocaleString()}<br>
+                        <b>User ID:</b> ${feature.properties.user_id}<br>
+                    </div>
+                    <img src="/media/${feature.properties.photo}" alt="Report Image" />
+                </div>
+            `;
+            layer.bindPopup(popupContent);
+        }
+    }
+
+    var geojsonLayer = L.geoJSON(geojson, {
+        onEachFeature: onEachFeature
+    }).addTo(map);
+
+    // Filter function to filter the GeoJSON data by year
+    function filterByYear(year) {
+        var filteredData = geojson.features.filter(function(feature) {
+            var reportYear = new Date(feature.properties.report_date).getFullYear();
+            return year === "all" || reportYear === parseInt(year);
+        });
+
+        // Remove the existing GeoJSON layer
+        map.removeLayer(geojsonLayer);
+
+        // Add the new filtered GeoJSON layer
+        geojsonLayer = L.geoJSON({ type: 'FeatureCollection', features: filteredData }, {
+            onEachFeature: onEachFeature
+        }).addTo(map);
+    }
+
+    // Add event listener to the year filter dropdown
+    document.getElementById("yearFilter").addEventListener("change", function(e) {
+        filterByYear(e.target.value);
+    });
+
+</script>
+</body>
+</html>
