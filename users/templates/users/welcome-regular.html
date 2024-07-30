@@ -1,0 +1,19 @@
+{% extends "users/base.html" %}
+{% block title %} Home Page {% endblock title%}
+{% block content %}
+
+    <div class="jumbotron" style="background-color: #f8d7da;">
+                {% if user.is_authenticated %}
+                    <h1>Welcome  {{ user.username }}!</h1>
+                {% else %}
+                    <p>Please <a href="{% url 'login' %}">login</a> to see more content.</p>
+                {% endif %}
+
+        <hr class="my-4">
+        <p class="lead">
+            <a class="btn btn-lg" style="background-color: #fff2cc" href="/regular/" role="button">Send Us Report</a>
+
+        </p>
+    </div>
+
+{% endblock content %}

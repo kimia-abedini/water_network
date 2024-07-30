@@ -1,0 +1,20 @@
+{% extends "users/base.html" %}
+{% block title %} Home Page {% endblock title%}
+{% block content %}
+{% block navbar %}{% endblock %}
+    <div class="jumbotron" style="background-color: #f3ccff">
+        <h1 class="display-4">Welcome</h1>
+        <p class="lead">
+            This is a <b>Water Network Management</b> System that here you can register your report about the water network
+            problems and the admin will see your reports and they will solve your problem as soon as possible :)<br>
+            Just Send us your reports and your Problems
+
+        </p>
+        <hr class="my-4">
+        <p class="lead">
+            <a class="btn btn-lg" style="background-color: #fff2cc" href="/logout/" role="button">Logout</a>
+            <a class="btn btn-lg" style="background-color: #fff2cc" href="/login/" role="button">Login</a>
+        </p>
+    </div>
+
+{% endblock content %}
