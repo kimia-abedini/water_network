@@ -1,0 +1,7 @@
+<workbench>
+    <plug-in>water_network.Plugin</plug-in>
+<!--    <plug-in>water_network.OpenValve</plug-in>-->
+    <plug-in>water_network.ShowOpenValvesPlugIn</plug-in>
+    <plug-in>water_network.ChangeState</plug-in>
+    <plug-in>water_network.WaterOutagePlugin</plug-in>
+</workbench>
