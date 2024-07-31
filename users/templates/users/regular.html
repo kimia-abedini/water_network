@@ -128,6 +128,32 @@
                 padding: 10px 15px;
             }
         }
+
+
+
+
+
+        .no-effect-button {
+            display: block;
+            color: black;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            background: none;
+            border: none;
+            {#color: inherit; /* Inherit the color from the parent, like a link */#}
+            cursor: pointer;
+            {#text-decoration: none; /* Remove underline if any */#}
+            {#padding: 13px; /* Remove padding */#}
+            font: inherit; /* Inherit font styles */
+        }
+        .no-effect-button:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+
+
     </style>
 </head>
 <body>
@@ -139,7 +165,7 @@
 
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
-        <a href="{% url 'logout' %}" class="nav-item nav-link" type="submit">Logout</a>
+        <button class="nav-item nav-link no-effect-button" type="submit">Log out</button>
     </form>
 
 </div>

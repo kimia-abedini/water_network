@@ -138,7 +138,9 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+SESSION_COOKIE_AGE = 1209600
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
 
 LOGIN_REDIRECT_URL = '../welcome'
 LOGIN_URL = 'login'
@@ -154,8 +156,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = str(os.getenv('kimia1999abedini@gmail.com'))
-EMAIL_HOST_PASSWORD = str(os.getenv('qzcn dczj gzbu xukl'))
+# because of security I did not write them
+EMAIL_HOST_USER = 'YOUR_EMAIL'
+EMAIL_HOST_PASSWORD = 'YOUR_PASSWORD'
 
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

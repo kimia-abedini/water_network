@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views import View
 from .models import Report, JunctionManholeElements, User
-
+from django.conf import settings
 from .forms import RegisterForm, LoginForm, UsersReportForm
 
 from django.contrib.auth.decorators import login_required
@@ -26,7 +26,16 @@ import json
 
 
 # Create your views here.
+def redirect_if_authenticated(view_func):
+    def wrapper(request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('/welcome/')  # Replace 'home' with your desired redirect target
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
+
+
+@redirect_if_authenticated
 def home(request):
     return render(request, 'users/home.html')
 
@@ -83,19 +92,30 @@ class RegisterView(View):
 
 
 
-
-
-
 class CustomLoginView(LoginView):
     form_class = LoginForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            # User is already logged in, redirect to the welcome page
+            return redirect('/welcome')
+        return super().dispatch(request, *args, **kwargs)
+
 
     def form_valid(self, form):
         remember_me = form.cleaned_data.get('remember_me')
 
-        if not remember_me:
-            # Set session expiry to 0 seconds to close the session after the browser is closed
+        # if not remember_me:
+        #     # Set session expiry to 0 seconds to close the session after the browser is closed
+        #     self.request.session.set_expiry(0)
+        #     self.request.session.modified = True
+
+        if remember_me :
+            # Set session expiry to the default (e.g., 2 weeks)
+            self.request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+        else:
+             # Set session expiry to browser close
             self.request.session.set_expiry(0)
-            self.request.session.modified = True
 
         # Log the user in
         login(self.request, form.get_user())
@@ -110,7 +130,7 @@ class CustomLoginView(LoginView):
         # Fallback URL in case something goes wrong with the redirection in form_valid
         return reverse_lazy('home')
 
-
+@login_required
 def regularUser(request):
     years = Report.objects.dates('report_date', 'year').distinct()
 
@@ -127,10 +147,11 @@ def regularUser(request):
     return render(request, 'users/regular.html', {"elements": elements})
 
 
+
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
-    template_name = 'users/password_reset.html'
-    email_template_name = 'users/password_reset_email.html'
-    subject_template_name = 'users/password_reset_subject'
+    template_name = 'users/registration/password_reset.html'
+    email_template_name = 'users/registration/password_reset_email.html'
+    subject_template_name = 'users/registration/password_reset_subject.txt'
     success_message = "We've emailed you instructions for setting your password, " \
                       "if an account exists with the email you entered. You should receive them shortly." \
                       " If you don't receive an email, " \
@@ -189,7 +210,12 @@ def success_page(request):
     return render(request, 'users/success.html')
 
 
+@login_required
 def showReports(request):
+    if not request.user.is_superuser:
+        # If the user is not a superuser, redirect to the welcome page
+        return redirect('/welcome')
+
     # Get distinct years from the Report model
     years = Report.objects.dates('report_date', 'year').distinct()
 
@@ -200,6 +226,6 @@ def showReports(request):
 
     return render(request, 'users/reports.html', {'geojson': geojson, 'years': years})
 
-
+@login_required
 def EnterRegular(request):
     return render(request, 'users/welcome-regular.html')

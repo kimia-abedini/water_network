@@ -14,6 +14,17 @@
 
 
     <title>{% block title %} {% endblock %} </title>
+<style>
+    .no-effect-button {
+    background: none;
+    border: none;
+    color: inherit; /* Inherit the color from the parent, like a link */
+    cursor: pointer;
+    text-decoration: none; /* Remove underline if any */
+    padding: 6px; /* Remove padding */
+    font: inherit; /* Inherit font styles */
+}
+</style>
 </head>
 <body>
 <div class="container p-3 my-3">
@@ -35,7 +46,7 @@
                             <a href="/profile/"  class="nav-item nav-link">Profile</a>
                             <form method="post" action="{% url 'logout' %}">
                                 {% csrf_token %}
-                                <button class="nav-item nav-link" type="submit">Log out</button>
+                                <button class="nav-item nav-link no-effect-button" type="submit">Log out</button>
                             </form>
                         {% else %}
                             <a href="{% url 'login' %}" class="nav-item nav-link">Sign in</a>
