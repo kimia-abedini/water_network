@@ -23,6 +23,7 @@ class Profile(models.Model):
     address = models.TextField(blank=True, null=True)
     role = models.ForeignKey(Role, models.DO_NOTHING, default=1)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
+
     # created_at = models.DateTimeField(blank=True, auto_now_add=True)
     # updated_at = models.DateTimeField(blank=True, auto_now=True)
     #
@@ -32,6 +33,7 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.username
+
 
 # class UsersReport(models.Model):
 #     user_coordinate = models.TextField(blank=True, null=True)
@@ -56,7 +58,6 @@ class Profile(models.Model):
 #             img.save(self.photo.path)
 
 
-
 class Report(models.Model):
     user_coordinate = gis_models.PointField(blank=True, null=True)
     report_type = models.CharField(max_length=255, blank=True, null=True)
@@ -77,12 +78,12 @@ class Report(models.Model):
     # def save(self, *args, **kwargs):
     #     super().save(*args, **kwargs)
 
-        # img = Image.open(self.photo.path)
+    # img = Image.open(self.photo.path)
 
-        # if img.height > 100 or img.width > 100:
-        #     new_img = (100, 100)
-        #     img.thumbnail(new_img)
-        #     img.save(self.photo.path)
+    # if img.height > 100 or img.width > 100:
+    #     new_img = (100, 100)
+    #     img.thumbnail(new_img)
+    #     img.save(self.photo.path)
 
 
 class JunctionManholeElements(models.Model):
@@ -107,3 +108,25 @@ class Pozzetti(models.Model):
     class Meta:
         managed = False
         db_table = 'pozzetti'
+
+
+class Ru(models.Model):
+    gid = models.AutoField(primary_key=True)
+    id = models.FloatField(blank=True, null=True)
+    geom = gis_models.GeometryField(srid=3003)
+
+    class Meta:
+        managed = False
+        db_table = 'ru'
+
+
+class Tratte(models.Model):
+    gid = models.AutoField(primary_key=True)
+    id = models.FloatField(blank=True, null=True)
+    diametro = models.FloatField(blank=True, null=True)
+    materiale = models.CharField(max_length=7)
+    geom = gis_models.GeometryField(srid=3003)
+
+    class Meta:
+        managed = False
+        db_table = 'tratte'

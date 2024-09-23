@@ -152,6 +152,36 @@
             color: black;
         }
 
+        .popup {
+            position: absolute; /* Positioning within the map div */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000; /* Ensure it's above other content */
+            display: block; /* Ensure it's displayed */
+            width: 300px; /* Set a width for better appearance */
+        }
+
+        .popup-content {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .popup button {
+            margin: 10px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .popup button:hover {
+            background-color: #f0f0f0;
+        }
 
 
     </style>
@@ -199,20 +229,20 @@
         scrollWheelZoom: true,
     }).setView([45.43223471723839, 11.871435642242432], 17);
 
-    const owsRootUrl = "http://localhost:8080/geoserver/gis/ows";
+    const owsRootUrl = "http://localhost:8080/geoserver/kim/ows";
     const defaultParameters = {
         service: "WFS",
         version: "1.0.0",
         request: "GetFeature",
-        typeName: "gis:pozzetti",
+        typeName: "kim:pozzetti",
         outputFormat: "text/javascript",
         format_options: "callback:getJson",
         srsName: "EPSG:4326",
     };
 
     const parameters = L.Util.extend(defaultParameters);
-    const ru_parameters = L.Util.extend({...defaultParameters, typeName: "gis:ru", format_options: "callback:getJson1",});
-    const tratte_parameters = L.Util.extend({...defaultParameters, typeName: "gis:tratte", format_options: "callback:getJson2",});
+    const ru_parameters = L.Util.extend({...defaultParameters, typeName: "kim:ru", format_options: "callback:getJson1",});
+    const tratte_parameters = L.Util.extend({...defaultParameters, typeName: "kim:tratte", format_options: "callback:getJson2",});
 
     const OWS_URL = owsRootUrl + L.Util.getParamString(parameters);
     const OWS_RU_URL = owsRootUrl + L.Util.getParamString(ru_parameters);
@@ -220,6 +250,8 @@
 
 
     let Layers = {};
+    let firstPointId = null; // To store the first selected point ID
+    let popupOpen = false;
 
     const displayPoints = (data, pointType = "PO") => {
         Layers[pointType] = L.geoJson(data, {
@@ -252,18 +284,174 @@
                             "<b>Installed Date:</b> " + fComp.installed_date + "<br> <hr>"
                     }
                 } else {
+                    console.log("priont")
+                    let elevation = '0';
+                    let depth = '0';
                     let data = getElevationAndDepth(parseInt(feature.id.split('.')[1]))
+
+                    if (data !== '-') {
+                        depth = data.z.toFixed(3)
+                        elevation = data.elevation
+                    }
+
                     tooltipContent = "<b>Type:</b> " + "User Connection" + "<br>" +
-                        "<b>Depth:</b> " + data.z.toFixed(3) + " Meters" + "<br>" +
-                        "<b>Elevation From Earth:</b> " + data.elevation + " Meters" + "<br>"
+                        "<b>Depth:</b> " + depth + " Meters" + "<br>" +
+                        "<b>Elevation From Earth:</b> " + elevation + " Meters" + "<br>"
                 }
+                // Add click event listener
+                circle.on('click', function () {
+                    // Highlighting the line
+                    circle.setStyle({
+                        color: '#00ff00', // Change color on click
+                        weight: 7 // Change weight on click
+                    });
+
+                    if (pointType === "PO" && firstPointId) {
+                        connectPoints(firstPointId, feature.id)
+                        firstPointId = null;
+                    } else if (firstPointId) {
+                        alert("Please select the point that is manhole.")
+                    } else if (pointType === "PO") {
+                        const action = confirm("Do you want to remove this point? Click OK to remove, Cancel to connect to another point.");
+                        if (action) {
+                            removePoint(feature.id, pointType)
+                        }
+                    } else {
+                        showUserConnectionPopup(feature.id, "You selected a User Connection point. What Would you like to do?", () => {
+                            // Handle connect action
+                            firstPointId = feature.id;
+                            alert("First point selected. Please click on another PO point to connect.");
+                        }, () => {
+                            // Handle removal action
+                            removePoint(feature.id, pointType)
+                        });
+                    }
+                });
                 circle.bindTooltip(tooltipContent, {
                     permanent: false,
                     direction: "top"
                 });
+
                 circle.addTo(group);
             },
         })
+    };
+
+    // Function to remove a point
+    const addPoint = (lat, lng, point_type) => {
+        fetch(`/add-point/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                lat, lng, point_type
+            })
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log(`Point ${lat} added successfully.`);
+                    render_data()
+                } else {
+                    console.error('Error adding point:', response.statusText);
+                }
+            });
+    }
+
+
+    // Function to remove a point
+    const removePoint = (pointId, pointType) => {
+        fetch(`/remove-point/${pointType}/${pointId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log(`Point ${pointId} removed successfully.`);
+                } else {
+                    console.error('Error removing point:', response.statusText);
+                }
+            });
+    }
+
+    // Function to connect two points
+    const connectPoints = (firstPointId, secondPointId) => {
+        const connectionData = {
+            point1: firstPointId,
+            point2: secondPointId
+        };
+
+        fetch('/connect-points/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}' // If using CSRF protection
+            },
+            body: JSON.stringify(connectionData)
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert(`Points ${firstPointId} and ${secondPointId} connected successfully.`);
+                    render_data()
+                } else {
+                    console.error('Error connecting points:', response.statusText);
+                }
+            });
+    }
+
+    // Helper function to get tooltip content
+    function getTooltipContent(feature, pointType) {
+        if (pointType === "PO") {
+            const fComponents = getComponents(parseInt(feature.properties.pozzetti_id));
+            let content = "<b>Type:</b> ManHole<br><b>Grado:</b> " + feature.properties.grado + "<br><hr>";
+            for (const fComp of fComponents) {
+                content += "<b>Component:</b> " + fComp.element_type + "<br>" +
+                    "<b>Installed Date:</b> " + fComp.installed_date + "<br><hr>";
+            }
+            return content;
+        } else {
+            let data = getElevationAndDepth(parseInt(feature.id.split('.')[1]));
+            return "<b>Type:</b> User Connection<br>" +
+                "<b>Depth:</b> " + data.z.toFixed(3) + " Meters<br>" +
+                "<b>Elevation From Earth:</b> " + data.elevation + " Meters<br>";
+        }
+    }
+
+    const showUserConnectionPopup = (pointId, message, onConnect, onRemove) => {
+        popupOpen = true;
+        const popup = document.createElement('div');
+        popup.className = 'popup';
+        popup.innerHTML = `
+        <div class="popup-content">
+            <p>${message}</p>
+            <button id="connect-button">Connect</button>
+            <button id="remove-button">Remove</button>
+            <button id="cancel-button">Close</button>
+        </div>
+    `;
+        // Append popup to the map div
+        const mapDiv = document.getElementById('map');
+        mapDiv.appendChild(popup);
+
+        // Handle button actions
+        document.getElementById('connect-button').onclick = () => {
+            onConnect();
+            document.getElementById('map').removeChild(popup);
+        };
+
+        document.getElementById('remove-button').onclick = () => {
+            onRemove();
+            document.getElementById('map').removeChild(popup);
+        };
+
+        document.getElementById('cancel-button').onclick = () => {
+            document.getElementById('map').removeChild(popup);
+        };
+
     };
 
     const displayLineString = (data) => {
@@ -288,6 +476,7 @@
                     direction: "top"
                 });
             },
+
         }).addTo(group);
     }
 
@@ -375,53 +564,93 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        render_data()
+    });
+
+    const render_data = () => {
         getPozzettiData();
         getRUData();
         getTratteData().then(()=>{
             Layers["PO"].bringToFront();
             Layers["RU"].bringToFront();
         })
-    });
+    }
 
 
     // Function to show a form in a popup
     function showForm(e) {
         let lat = e.latlng.lat;
         let lng = e.latlng.lng;
+        {% if user.is_authenticated %}
+        {% if user.is_superuser %}
+            // For superusers: Show admin options to add manhole directly
+            let popupContent = `<p>You can add a manhole or home directly.</p>
+<button id="addManhole" onclick="addPoint(${lat}, ${lng}, 'MANHOLE')">Add Manhole</button>
+<button id="addHome" onclick="addPoint(${lat}, ${lng}, 'HOME')">Add Home</button>`;
+            L.popup({maxWidth: "200px"}).setLatLng(e.latlng).setContent(popupContent).openOn(map);
+        {% else %}
+            popupContent = `
+                <form id="popupForm" method="post" enctype="multipart/form-data" action="{% url 'submit_report' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="location" value="POINT(${lng} ${lat})">
 
-        let popupContent = `
-            <form id="popupForm" method="post" enctype="multipart/form-data" action="{% url 'submit_report' %}">
-                {% csrf_token %}
-                <input type="hidden" name="location" value="POINT(${lng} ${lat})">
+                    <label for="latitude">Latitude:</label>
+                    <input type="text" id="latitude" name="latitude" value="${lat}" readonly>
 
-                <label for="latitude">Latitude:</label>
-                <input type="text" id="latitude" name="latitude" value="${lat}" readonly>
+                    <label for="longitude">Longitude:</label>
+                    <input type="text" id="longitude" name="longitude" value="${lng}" readonly>
 
-                <label for="longitude">Longitude:</label>
-                <input type="text" id="longitude" name="longitude" value="${lng}" readonly>
+                    <label for="report_type">Type of Error:</label>
+                    <select id="report_type" name="report_type" required>
+                        <option value="fault">Fault</option>
+                        <option value="loss of water">Loss of Water </option>
+                    </select>
 
-                <label for="report_type">Type of Error:</label>
-                <select id="report_type" name="report_type" required>
-                    <option value="fault">Fault</option>
-                    <option value="loss of water">Loss of Water </option>
-                </select>
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="4"></textarea>
 
-                <label for="description">Description:</label>
-                <textarea id="description" name="description" rows="4"></textarea>
+                    <label for="photo">Upload Photo:</label>
+                    <input type="file" id="photo" name="photo">
 
-                <label for="photo">Upload Photo:</label>
-                <input type="file" id="photo" name="photo">
-
-                <input type="submit" value="Submit">
-            </form>
-        `;
-
-        L.popup({maxWidth: "auto"}).setLatLng(e.latlng).setContent(popupContent).openOn(map);
+                    <input type="submit" value="Submit">
+                </form>
+            `;
+            L.popup({maxWidth: "auto"}).setLatLng(e.latlng).setContent(popupContent).openOn(map);
+        {% endif %}
+        {% else %}
+            // Non-authenticated users: Notify user they can't add points
+            alert("Please log in to interact with the map.");
+        {% endif %}
     }
 
+    let popUpButtonClick = false;
     // Add click event listener to the map
-    map.on('click', showForm);
+    map.on('click', function(e) {
+        // Initialize a flag to check if the click was on a layer
+        let clickedOnLayer = false;
 
+        // Check each layer to see if the click was on it
+        map.eachLayer(function(layer) {
+            if(layer.options.opacity === 0.9){
+                clickedOnLayer=true;
+            }
+        });
+
+        if (popupOpen) {
+            popupOpen = false;
+            popUpButtonClick = true;
+            return;
+        }
+
+        // If a layer was clicked, do not show the popup
+        if (clickedOnLayer || popUpButtonClick) {
+            popUpButtonClick = false;
+            return; // Exit early
+        }
+
+        // If not on a layer, show the form
+        showForm(e);
+    });
 
     const elevationData = [
         {
@@ -4867,8 +5096,13 @@
     ]
 
     const getElevationAndDepth = (index) => {
-        return elevationData.filter(el => el.id === index - 1)[0]
+        data = elevationData.filter(el => el.id === index - 1)
+        if(data.length > 0){
+            return data[0]
+        }
+        return '-';
     }
+
 
     const getComponents = (pozzetti_id) => {
         return components[pozzetti_id]
@@ -4876,13 +5110,3 @@
 </script>
 </body>
 </html>
-
-{##}
-{#LhISEmB7OpHWvqSlyAzR#}
-{##}
-{#RJsyNwWRs81JHn6vP9O64bJ1DA4OQLX0XfhBPkLddHA#}
-{##}
-{##}
-{#https://discover.search.hereapi.com/v1/revgeocode?at=52.5228,13.4124&&apiKey=RJsyNwWRs81JHn6vP9O64bJ1DA4OQLX0XfhBPkLddHA#}
-{##}
-{#https://revgeocode.search.hereapi.com/v1/revgeocode?at=45.3960043,11.9014451&apiKey=RJsyNwWRs81JHn6vP9O64bJ1DA4OQLX0XfhBPkLddHA#}

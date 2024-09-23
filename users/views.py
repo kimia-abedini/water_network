@@ -1,10 +1,16 @@
+import random
+
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView
 from django.core.serializers import serialize
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views import View
-from .models import Report, JunctionManholeElements, User
+from django.views.decorators.csrf import csrf_exempt
+from django.db import connection
+
+from .models import Report, JunctionManholeElements, User, Ru, Pozzetti, Tratte
 from django.conf import settings
 from .forms import RegisterForm, LoginForm, UsersReportForm
 
@@ -16,13 +22,13 @@ from django.urls import reverse_lazy
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.messages.views import SuccessMessageMixin
 
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import MultiPoint, Point
 from django.urls import reverse_lazy
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
 import json
+from pyproj import Transformer
 
 
 # Create your views here.
@@ -31,8 +37,14 @@ def redirect_if_authenticated(view_func):
         if request.user.is_authenticated:
             return redirect('/welcome/')  # Replace 'home' with your desired redirect target
         return view_func(request, *args, **kwargs)
+
     return wrapper
 
+
+def convert_crs(lat, lng):
+    # Create a transformer object
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3003")
+    return transformer.transform(lat, lng)
 
 
 @redirect_if_authenticated
@@ -91,7 +103,6 @@ class RegisterView(View):
 #         return super(CustomLoginView, self).form_valid(form)
 
 
-
 class CustomLoginView(LoginView):
     form_class = LoginForm
 
@@ -101,7 +112,6 @@ class CustomLoginView(LoginView):
             return redirect('/welcome')
         return super().dispatch(request, *args, **kwargs)
 
-
     def form_valid(self, form):
         remember_me = form.cleaned_data.get('remember_me')
 
@@ -110,11 +120,11 @@ class CustomLoginView(LoginView):
         #     self.request.session.set_expiry(0)
         #     self.request.session.modified = True
 
-        if remember_me :
+        if remember_me:
             # Set session expiry to the default (e.g., 2 weeks)
             self.request.session.set_expiry(settings.SESSION_COOKIE_AGE)
         else:
-             # Set session expiry to browser close
+            # Set session expiry to browser close
             self.request.session.set_expiry(0)
 
         # Log the user in
@@ -129,6 +139,7 @@ class CustomLoginView(LoginView):
     def get_success_url(self):
         # Fallback URL in case something goes wrong with the redirection in form_valid
         return reverse_lazy('home')
+
 
 @login_required
 def regularUser(request):
@@ -145,7 +156,6 @@ def regularUser(request):
             elements[po_id] = [{"element_type": alje.element_type, "installed_date": str(alje.installation_date)}]
 
     return render(request, 'users/regular.html', {"elements": elements})
-
 
 
 class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
@@ -226,6 +236,90 @@ def showReports(request):
 
     return render(request, 'users/reports.html', {'geojson': geojson, 'years': years})
 
+
 @login_required
 def EnterRegular(request):
     return render(request, 'users/welcome-regular.html')
+
+
+@csrf_exempt  # Use this if you're not passing CSRF token
+def add_point(request):
+    if request.method == 'POST':
+        try:
+            # Parse the incoming data
+            data = json.loads(request.body.decode('utf-8'))
+            lat = data.get('lat')
+            lng = data.get('lng')
+            point_type = data.get('point_type')
+
+            # Validate the data
+            if lat is None or lng is None or point_type is None:
+                return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+            if point_type == "HOME":
+                lng, lat = convert_crs(lat, lng)
+                point_wkt = f"POINT ZM({lng} {lat} {22.5435} {-100000000000000000000000000000000000000000})"  # SRID 4326 is the standard for lat/lon (WGS84)
+                point_id = random.randint(1000, 90000)
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO ru (geom, id) VALUES (ST_GeomFromText(%s, 3003), %s)",
+                        [point_wkt, point_id]
+                    )
+            else:
+                # TODO: NEED TO CHANGE TO THE POZZETTI
+                lng, lat = convert_crs(lat, lng)
+                point_wkt = f"POINT ZM({lng} {lat} {22.5435} {-100000000000000000000000000000000000000000})"  # SRID 4326 is the standard for lat/lon (WGS84)
+                point_id = random.randint(1000, 90000)
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO ru (geom, id) VALUES (ST_GeomFromText(%s, 3003), %s)",
+                        [point_wkt, point_id]
+                    )
+            # Save the point to the database (this is where you'd integrate your model)
+            # For example:
+            # point = Point.objects.create(lat=lat, lng=lng, point_type=point_type)
+
+            # Return success response
+            return JsonResponse({'message': 'Point added successfully'}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    # If not a POST request, return a method not allowed response
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+
+@csrf_exempt  # Use this if you're not passing CSRF token
+def connect_points(request):
+    if request.method == 'POST':
+        try:
+            # Parse the incoming data
+            data = json.loads(request.body.decode('utf-8'))
+            home_id = data.get('point1').split(".")[1]
+            hole_id = data.get('point2').split(".")[1]
+
+            print(home_id, hole_id)
+
+            home = Ru.objects.get(gid=home_id).geom
+            hole = Pozzetti.objects.get(gid=hole_id).geom
+
+            multilinestring_wkt = (
+                f"MULTILINESTRING ZM(({home.x} {home.y} {22.5435} {-100000000000000000000000000000000000000000}, "
+                f"{hole.x} {hole.y} {22.5435} {-100000000000000000000000000000000000000000}))"
+            )
+
+            line_id = random.randint(1000, 90000)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO tratte (geom, id, diametro, materiale) VALUES (ST_GeomFromText(%s, 3003), %s, %s, %s)",
+                    [multilinestring_wkt, line_id, 1, 'PVC']
+                )
+            # Return success response
+            return JsonResponse({'message': 'Point added successfully'}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    # If not a POST request, return a method not allowed response
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

@@ -4,15 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1bbc9330-5630-45ee-b5c7-2e2631d70e88" name="Changes" comment="the Plugins related to OpenJump added to the project">
+    <list default="true" id="1bbc9330-5630-45ee-b5c7-2e2631d70e88" name="Changes" comment="some small changes to fix bugs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gisProject/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/gisProject/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gisProject/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/gisProject/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/templates/users/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/users/templates/users/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/templates/users/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/users/templates/users/home.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/templates/users/registration/password_reset_email.html" beforeDir="false" afterPath="$PROJECT_DIR$/users/templates/users/registration/password_reset_email.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/templates/users/regular.html" beforeDir="false" afterPath="$PROJECT_DIR$/users/templates/users/regular.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/users/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,9 +15,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
   <component name="ProjectId" id="2jy7H88979wbwvPlKdatM53G8fs" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -35,7 +28,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/kimiya/Desktop/gisProject2/gisProject",
+    "last_opened_file_path": "C:/Users/kimiya/Desktop/Plugin",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -64,7 +57,10 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1722347372253</updated>
-      <workItem from="1722347373357" duration="14426000" />
+      <workItem from="1722347373357" duration="15021000" />
+      <workItem from="1723448557225" duration="1794000" />
+      <workItem from="1724581146279" duration="193000" />
+      <workItem from="1726846848318" duration="3033000" />
     </task>
     <task id="LOCAL-00001" summary="the Plugins related to OpenJump added to the project">
       <option name="closed" value="true" />
@@ -74,7 +70,15 @@
       <option name="project" value="LOCAL" />
       <updated>1722349757762</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="some small changes to fix bugs">
+      <option name="closed" value="true" />
+      <created>1722437996291</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1722437996291</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -83,6 +87,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="init WFS service" />
     <MESSAGE value="the Plugins related to OpenJump added to the project" />
-    <option name="LAST_COMMIT_MESSAGE" value="the Plugins related to OpenJump added to the project" />
+    <MESSAGE value="some small changes to fix bugs" />
+    <option name="LAST_COMMIT_MESSAGE" value="some small changes to fix bugs" />
   </component>
 </project>

@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import home, showReports, RegisterView, LoginView, regularUser, profile, submit_report, success_page, EnterRegular
+from .views import home, showReports, RegisterView, LoginView, regularUser, profile, submit_report, success_page, \
+    EnterRegular, add_point, connect_points
 from django.contrib import admin
 
 urlpatterns = [
@@ -11,5 +12,7 @@ urlpatterns = [
     path('submit_report/', submit_report, name='submit_report'),
     path('success/', success_page, name='success_page'),
     path('reports/',showReports,name='reports'),
-    path('welcome/', EnterRegular, name='welcome-regular')
+    path('welcome/', EnterRegular, name='welcome-regular'),
+    path('add-point/', add_point, name='add_point'),
+    path('connect-points/', connect_points, name='connect_points')
 ]
